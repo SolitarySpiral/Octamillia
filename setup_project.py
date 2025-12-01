@@ -199,6 +199,7 @@ def setup_poetry_and_ruff():
             "sphinx",
             "sphinx-rtd-theme",
             "sphinx-autodoc-typehints",
+            "pytest",
             "--group",
             "dev",
         ]
@@ -224,6 +225,14 @@ def update_pyproject_toml(config_content: str):
                 print("✅ Секция [tool.ruff] добавлена в pyproject.toml.")
             else:
                 print("ℹ️ Секция [tool.ruff] уже существует. Пропускаем запись.")
+
+            if "[tool.pytest.ini_options]" not in content:
+                with open(pyproject_path, "a", encoding="utf-8") as f:
+                    f.write("\n")
+                    f.write(config_content.strip())
+                print("✅ Секция [tool.pytest.ini_options] добавлена в pyproject.toml.")
+            else:
+                print("ℹ️ Секция [tool.pytest.ini_options] уже существует. Пропускаем запись.")
 
         except IOError as e:
             print(f"❌ Не удалось прочитать/записать в pyproject.toml: {e}")
@@ -338,9 +347,7 @@ def main():
 
     # 1. Настройка Ruff в pyproject.toml
     update_pyproject_toml(RUFF_CONFIG)
-
     # 2 установка pytest
-    run_command("poetry", "add", "--group", "dev", "pytest")
     update_pyproject_toml(PYTEST_CONFIG)
     Path("tests").mkdir(exist_ok=True)
 
@@ -354,6 +361,8 @@ def main():
 
     # 4. Настройка Sphinx
     setup_sphinx_docs(SPHINX_CONF_PY_CONTENT, SPHINX_INDEX_RST_CONTENT, SPHINX_MODULES_RST_CONTENT)
+    # 5. добавление линтера (если проект совершенно новый)
+    # run_command("poetry", "add", "pylint")
 
     print("\n======================================================")
     print("=== НАСТРОЙКА ЗАВЕРШЕНА УСПЕШНО! ===")
