@@ -1,0 +1,13 @@
+# Python Environment and Artifacts
+__pycache__/
+*.py[cod]
+.venv
+.env
+.pre-commit-config.yaml
+# IDE and Build
+.vscode/
+dist/
+*.egg-info/
+.coverage
+# Sphinx Documentation
+docs/_build/
