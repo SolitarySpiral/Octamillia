@@ -105,28 +105,16 @@ class TentacleMetadata:
     """
     Структура данных для регистрации нового Щупальца в Реестре.
     Описывает НЕ ФУНКЦИОНАЛ, а МЕХАНИЗМ ЗАПУСКА.
-    т.е. после создания функционала тентакли, которая наследует TentacleContract,
+    т.е. после создания функционала тентакли, которая наследует CommandDispatchTentacle,
     нужно создать оффер metadata в том же модуле.
     ВАЖНО: Мозг или процесс инициализации системы загружает этот файл
     и добавляет метаданные в глобальный WAI_REGISTRY!
-
-    Пример:\n
-    class VideoSyncStandinTentacle(TentacleContract)
-        ...
-
-    TENTACLE_METADATA = TentacleMetadata(
-        tentacle_id="VIDEO_DOWNLOADER",
-        contract_interface=TentacleContract,
-        internal_implementation=VideoSyncStandinTentacle,
-        external_image_tag="octamillia/video_sync:v1.0",
-        handles_commands=["DOWNLOAD_VIDEO", "CHECK_VIDEO_HEALTH"],
-    )\n
     """
 
     tentacle_id: str  # Уникальный ID экземпляра/типа (например, 'VIDEO_DOWNLOADER_1')
     contract_interface: Type[
-        TentacleContract
-    ]  # Ссылка на базовый контракт WAI (всегда TentacleContract)
+        CommandDispatchTentacle
+    ]  # Ссылка на базовый контракт WAI (всегда CommandDispatchTentacle)
 
     # ----------------------------------------------------
     # Механизм реализации (WAI Core)

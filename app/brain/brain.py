@@ -50,8 +50,6 @@ class Brain:
                     if metadata.tentacle_id not in self.registry:
                         self.registry[metadata.tentacle_id] = metadata
 
-                        # ВАЖНО: Теперь мы просто делаем await, так как мы внутри async метода
-                        # Никакого asyncio.run()!
                         instance = metadata.internal_implementation()
                         metadata.handles_commands = instance.get_capabilities()
 
