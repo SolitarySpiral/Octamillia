@@ -6,7 +6,12 @@ from typing import Any, Dict, List
 from .external_client import ExternalTentacleClient
 from .logger import logger
 from .models import OctaResponse
-from .WAI import WAI_REGISTRY, CommandContext, TentacleContract, TentacleMetadata
+from .WAI import (
+    WAI_REGISTRY,
+    CommandContext,
+    CommandDispatchTentacle,
+    TentacleMetadata,
+)
 
 
 class Brain:
@@ -74,7 +79,7 @@ class Brain:
         print(f"  [BRAIN]: Обнаружена нехватка мощностей. Инициирую регенерацию {tentacle_id}...")
         # Здесь была бы команда к Kubernetes/Docker на запуск нового Pod
 
-    def _get_standin_instance(self, metadata: TentacleMetadata) -> TentacleContract:
+    def _get_standin_instance(self, metadata: TentacleMetadata) -> CommandDispatchTentacle:
         """
         Получает и инициализирует Standin (Внутреннее Щупальце) из Тела/WAI.
         """

@@ -10,7 +10,6 @@ from app.brain import (
     CommandContext,
     CommandDispatchTentacle,
     OctaResponse,
-    TentacleContract,
     TentacleMetadata,
 )
 
@@ -44,7 +43,7 @@ class ConfigLoaderStandinTentacle(CommandDispatchTentacle):
 
 TENTACLE_METADATA = TentacleMetadata(
     tentacle_id="CONFIG_LOADER",
-    contract_interface=TentacleContract,
+    contract_interface=CommandDispatchTentacle,
     internal_implementation=ConfigLoaderStandinTentacle,
     external_image_tag="octamillia/config_loader:v1.0",
     handles_commands=ConfigLoaderStandinTentacle.get_capabilities(),
