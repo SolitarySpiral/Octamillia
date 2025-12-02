@@ -1,6 +1,8 @@
 import pytest
 
 from app import Brain, CommandContext
+from app.brain import BodyServiceProvider
+from app.brain.logger import logger
 from app.tentacles import ConfigPayload
 
 # Import Brain and Payloads as they are exported for the clean API
@@ -9,7 +11,12 @@ from app.tentacles import ConfigPayload
 @pytest.fixture(scope="module")
 async def initialized_brain():
     """Фикстура, которая инициализирует и зажигает Мозг один раз."""
-    brain = Brain()
+    provider = BodyServiceProvider(
+        logger_instance=logger,
+        # config_reader_instance=main_config
+    )
+    # Мозг запускается и сам находит все щупальца
+    brain = Brain(body_provider=provider)
     await brain.ignite()
     return brain
 
