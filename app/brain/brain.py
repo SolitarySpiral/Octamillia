@@ -3,6 +3,7 @@ import importlib
 from pathlib import Path
 from typing import Any, Dict, List
 
+from .dependency_provider import BodyServiceProvider
 from .external_client import ExternalTentacleClient
 from .logger import logger
 from .models import OctaResponse
@@ -19,11 +20,12 @@ class Brain:
     Мозг (Control Plane) Octamillia. Отвечает за маршрутизацию и реконсиляцию.
     """
 
-    def __init__(self):
+    def __init__(self, body_provider: BodyServiceProvider):
         self.registry = WAI_REGISTRY
         self.active_external_tentacles: Dict[str, ExternalTentacleClient] = {}
         self.last_used_index: Dict[str, int] = {}
         self.command_map = {}  # Карта пока пуста
+        self.body_provider = body_provider
 
     async def ignite(self):
         """
@@ -41,6 +43,9 @@ class Brain:
 
     async def _discover_tentacles(self, module_paths: List[str]):
         """Асинхронная загрузка и опрос щупалец."""
+
+        common_deps = self.body_provider.get_common_dependencies()
+
         for module_path in module_paths:
             try:
                 module = importlib.import_module(module_path)
@@ -49,9 +54,16 @@ class Brain:
                     metadata = module.TENTACLE_METADATA
                     if metadata.tentacle_id not in self.registry:
                         self.registry[metadata.tentacle_id] = metadata
+                        # 1. Создаем Инстанс Щупальца, используя инжекцию!
+                        # ДОБАВЛЕНИЕ: Передаем tentacle_id как зависимость
+                        common_deps["tentacle_id"] = metadata.tentacle_id
+                        # Передаем **common_deps** в конструктор
+                        instance = metadata.internal_implementation(**common_deps)
 
-                        instance = metadata.internal_implementation()
+                        # 3. Принятие оферов обычных щупалец
                         metadata.handles_commands = instance.get_capabilities()
+                        # 2. Мозг также должен настроить асинхронные подписки
+                        await self._activate_async_subscriptions(instance)
 
                         print(
                             f"  [BRAIN DISCOVERY]: Офер принят: {metadata.tentacle_id} {metadata.handles_commands}"
@@ -79,7 +91,7 @@ class Brain:
 
     def _get_standin_instance(self, metadata: TentacleMetadata) -> CommandDispatchTentacle:
         """
-        Получает и инициализирует Standin (Внутреннее Щупальце) из Тела/WAI.
+        Получает и инициализирует Standin (Внутреннее Щупальце) из репозитория app.tentacles.
         """
         if not metadata.internal_implementation:
             raise ValueError(
@@ -154,6 +166,21 @@ class Brain:
 
         # Standin всегда возвращает OctaResponse
         return await standin_instance.process_command(context)
+
+    async def _activate_async_subscriptions(self, instance: CommandDispatchTentacle):
+        """Автоматически подписывает методы инстанса на шину сообщений."""
+        message_bus = self.body_provider.get_message_bus()
+
+        # Используем контракт, который мы определили:
+        handlers = instance.get_event_handlers()
+
+        for topic, method_name in handlers.items():
+            handler_method = getattr(instance, method_name)
+
+            # Мозг подписывает метод Щупальца на транспорт
+            await message_bus.subscribe(topic, handler_method)
+
+            print(f"  [BRAIN ASYNCSYNC]: Подписка {instance.tentacle_id}.{method_name} -> {topic}")
 
 
 # =======================================================
