@@ -1,28 +1,27 @@
+from typing import Dict
+
 from app.body.interfaces import IMessageBus
-from app.body.messaging.in_memory_bus import InMemoryMessageBus
+from app.body.messaging.hearth import HeartBus
 
 
 class BodyServiceProvider:
-    """
-    Фабрика или контейнер для предоставления общих зависимостей Тела.
-    """
-
-    def __init__(self, logger_instance):
-        # 1. Основные органы Тела (глобальные, если нет абстракций)
+    def __init__(self, logger_instance, bus_implementations: Dict[str, IMessageBus]):
         self.logger = logger_instance
-        # 2. Абстракции Тела (IMessageBus)
-        self.message_bus: IMessageBus = InMemoryMessageBus()
-        # self.config_reader = config_reader_instance  # Пример IConfigReader
+
+        # 1. Храним реализации, которые нам передали
+        self.bus_implementations = bus_implementations
+
+        # 2. Создаем Сердце из того, что получили
+        self.heart = HeartBus(buses=self.bus_implementations)
+
+        print("[PROVIDER] Провайдер инициализирован. Шины загружены извне.")
 
     def get_common_dependencies(self) -> dict:
-        """
-        Возвращает словарь всех общих зависимостей, готовых к инъекции.
-        """
         return {
-            "message_bus": self.message_bus,
+            "message_bus": self.heart,  # <-- Щупальца получают Сердце
             "logger": self.logger,
-            # "config_reader": self.config_reader, # Если нужно
         }
 
-    def get_message_bus(self) -> IMessageBus:
-        return self.message_bus
+    # Для тестов, если нужно достучаться до конкретной вены
+    def get_heart(self) -> HeartBus:
+        return self.heart
