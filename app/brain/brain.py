@@ -169,15 +169,28 @@ class Brain:
 
     async def _activate_async_subscriptions(self, instance: CommandDispatchTentacle):
         """Автоматически подписывает методы инстанса на шину сообщений."""
-        message_bus = self.body_provider.get_message_bus()
 
-        # Используем контракт, который мы определили:
+        # ИСПРАВЛЕНИЕ: Берем главную шину (Сердце) у Провайдера
+        # (Предполагаем, что get_common_dependencies возвращает 'message_bus')
+        # Либо добавим метод get_main_bus() в провайдер.
+
+        # Вариант А: Если провайдер отдает HeartBus как message_bus в common_dependencies
+        deps = self.body_provider.get_common_dependencies()
+        message_bus = deps.get("message_bus")
+
+        # Вариант Б (Надежнее): Явный метод в провайдере
+        # message_bus = self.body_provider.get_main_bus()
+
+        if not message_bus:
+            print("  [BRAIN WARNING]: Шина сообщений не найдена для подписки.")
+            return
+
         handlers = instance.get_event_handlers()
 
         for topic, method_name in handlers.items():
             handler_method = getattr(instance, method_name)
 
-            # Мозг подписывает метод Щупальца на транспорт
+            # Теперь подписка идет в СЕРДЦЕ -> которое подписывает И Kafka, И Memory
             await message_bus.subscribe(topic, handler_method)
 
             print(f"  [BRAIN ASYNCSYNC]: Подписка {instance.tentacle_id}.{method_name} -> {topic}")

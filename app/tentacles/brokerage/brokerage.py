@@ -20,16 +20,15 @@ class BrokerageTentacle(CommandDispatchTentacle):
         self.message_bus = message_bus
         self.logger = logger
 
-    async def _handle_incoming_order(self, event: OctaEvent):
+    async def _handle_incoming_order(self, event: OctaEvent, source_bus: str = None):
         """Обрабатывает асинхронное сообщение, пришедшее из "вены"."""
         self.logger.info(f"Получен новый ордер: {event.payload}")
         # ... здесь выполняется бизнес-логика (например, сохранить в БД) ...
-
+        order_id = event.payload.get("id", "UNKNOWN_ID")
+        # поскольку payload любой, пидантик не подсвечивает поля
         # Может отправить ответное сообщение (артерия)
-        response_event = OctaEvent(
-            event="ORDER_RECEIVED", payload={"order_id": event.payload["id"]}
-        )
-        await self.message_bus.publish("INTERNAL_FEEDBACK", response_event)
+        response_event = OctaEvent(event="ORDER_RECEIVED", payload={"order_id": order_id})
+        await self.message_bus.publish("INTERNAL_FEEDBACK", response_event, target_bus=source_bus)
 
     async def get_health(self) -> float:
         return 1.0

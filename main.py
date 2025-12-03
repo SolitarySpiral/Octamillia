@@ -2,6 +2,7 @@ import asyncio
 
 from app import Brain, CommandContext
 from app.body.blood import OctaEvent
+from app.body.messaging import InMemoryMessageBus, KafkaMessageBus
 from app.brain.dependency_provider import BodyServiceProvider
 from app.brain.logger import logger
 from app.tentacles import ConfigPayload, VideoPayload
@@ -9,16 +10,22 @@ from app.tentacles import ConfigPayload, VideoPayload
 
 async def ask_octamillia():
     print("--- 🐙 Инициализация Octamillia ---")
-    # 2. Создаем Провайдера
-    provider = BodyServiceProvider(
-        logger_instance=logger,
-        # config_reader_instance=main_config
-    )
-    # Мозг запускается и сам находит все щупальца
+    # ... инициализация ...
+    # 1. КОМПОЗИЦИЯ: Создание конкретных реализаций ВНЕ Провайдера
+    bus_config = {
+        "kafka": KafkaMessageBus(bootstrap_servers="localhost:9092"),
+        "inmemory": InMemoryMessageBus(),
+    }
+    provider = BodyServiceProvider(logger, bus_implementations=bus_config)
     brain = Brain(body_provider=provider)
-    # ВАЖНО: Мы зажигаем мозг асинхронно!
-    await brain.ignite()
 
+    # Запускаем сердце (оно попробует поднять и Кафку, и Память)
+    await provider.get_heart().start()
+
+    # Один раз зажигаем мозг. Щупальца подписываются на Сердце.
+    # Сердце транслирует подписку и в Кафку, и в Память.
+    await brain.ignite()
+    await asyncio.sleep(2)
     print("\n--- ✅ Результат Обнаружения ---")
     print(f"Обнаруженные ID щупалец: {list(brain.registry.keys())}")
     print(f"Карта команд: {list(brain.command_map.keys())}")
@@ -91,35 +98,30 @@ async def ask_octamillia():
 
     # --- ТЕСТ 4: Корректная проверка асинхронного брокера ---
     print("\n--- 🩸 ТЕСТ 4: Асинхронная публикация в Сосуд (ORDER_TOPIC) ---")
+    # --- ТЕСТ 4.1: InMemory ---
+    print("\n--- 🩸 ТЕСТ 4.1: InMemory ---")
+    event_mem = OctaEvent(event="TEST_MEM", payload={"id": "test4.1", "message": "Puck"})
 
-    # 1. Получаем доступ к активному Сосуду (Message Bus)
-    #    (Предполагаем, что BodyServiceProvider передан в Brain и имеет метод get_message_bus)
-    try:
-        message_bus = brain.body_provider.get_message_bus()
-    except AttributeError:
-        print(
-            "[ОШИБКА ТЕСТА]: BodyServiceProvider не был инициализирован или не имеет get_message_bus."
-        )
-        # Здесь нужно выйти или исправить инициализацию
-        exit(1)
+    # Явно просим Сердце отправить только в память (для чистоты теста)
+    await provider.get_heart().publish("ORDER_TOPIC", event_mem, target_bus="inmemory")
 
-    # 2. Создаем "Кровяное тельце" (OctaEvent)
-    order_event = OctaEvent(
-        event="NEW_ORDER", payload={"id": "ORDER-999", "symbol": "AAPL", "quantity": 10}
+    await asyncio.sleep(2)
+
+    # --- ТЕСТ 4.2: Kafka ---
+    print("\n--- 🩸 ТЕСТ 4.2: Kafka ---")
+    event_kafka = OctaEvent(
+        event="TEST_KAFKA",
+        payload={"id": "ORDER-KAFKA-1", "message": "Fuck"},  # <--- Должен быть 'id'
     )
 
-    # 3. Публикуем его в Топик (ВЕНА)
-    #    Это вызовет _handle_incoming_order в BrokerageTentacle
-    await message_bus.publish("ORDER_TOPIC", order_event)
+    # Явно просим Сердце отправить только в Кафку
+    # (Щупальце всё равно это получит, так как оно подписано на Сердце)
+    await provider.get_heart().publish("ORDER_TOPIC", event_kafka, target_bus="kafka")
 
-    # 4. Даем время асинхронному слушателю на обработку
-    await asyncio.sleep(0.1)
-    print("[ТЕСТ УСПЕШЕН]: Проверка консоли. Сообщение должно было быть обработано.")
+    await asyncio.sleep(2)
 
-    # Проверка консоли должна показать:
-    # [BUS] 📥 Сообщение 'NEW_ORDER' получено из 'ORDER_TOPIC'.
-    # [BrokerageTentacle] Получен новый ордер: {'id': 'ORDER-999', ...}
-    # [BUS] 📤 Сообщение 'ORDER_RECEIVED' отправлено в топик 'INTERNAL_FEEDBACK'.
+    # Остановка
+    await provider.get_heart().stop()
 
 
 if __name__ == "__main__":
