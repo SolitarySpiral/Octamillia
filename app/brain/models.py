@@ -1,4 +1,4 @@
-from typing import Generic, Optional, TypeVar
+from typing import Any, Dict, Generic, Optional, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -20,6 +20,9 @@ class OctaResponse(BaseModel, Generic[DataT]):
     message: str = Field(default="", description="Описание ошибки или детали")
     # Магия здесь: data имеет тип DataT, который подставится автоматически
     data: Optional[DataT] = None
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Дополнительные метаданные ответа"
+    )
 
     @property
     def is_success(self) -> bool:
@@ -27,9 +30,9 @@ class OctaResponse(BaseModel, Generic[DataT]):
 
     # Фабричные методы для красоты кода
     @classmethod
-    def ok(cls, data: DataT, msg: str = ""):
-        return cls(status="SUCCESS", data=data, message=msg)
+    def ok(cls, data: DataT, msg: str = "", **kwargs: Any):
+        return cls(status="SUCCESS", data=data, message=msg, metadata=kwargs)
 
     @classmethod
-    def fail(cls, msg: str):
-        return cls(status="ERROR", data=None, message=msg)
+    def fail(cls, msg: str = "", **kwargs: Any):
+        return cls(status="ERROR", data=None, message=msg, metadata=kwargs)
