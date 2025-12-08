@@ -18,9 +18,9 @@ class CommandContext(BaseModel):
 
     command_name: str = Field(..., description="Имя команды")
     correlation_id: str = Field(..., description="Ключ идемпотентности / ID транзакции")
-    user_id: Optional[int]
     params: Dict[str, Any]
     # ... другие метаданные для маршрутизации
+    user_id: Optional[int | str]
     source_service: Optional[str]
 
 

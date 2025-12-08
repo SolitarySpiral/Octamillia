@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 from app import Brain, CommandContext
 from app.body.blood import OctaEvent
@@ -6,6 +7,10 @@ from app.body.messaging import InMemoryMessageBus, KafkaMessageBus
 from app.brain.dependency_provider import BodyServiceProvider
 from app.brain.logger import logger
 from app.tentacles import ConfigPayload, VideoPayload
+
+# --- Глобальная инициализация ---
+global_config_path = os.environ.get("OCTAMILLIA_GLOBAL_CONFIG_PATH", "./config/default.yaml")
+# --------------------------------
 
 
 async def ask_octamillia():
@@ -32,13 +37,13 @@ async def ask_octamillia():
     print("-------------------------")
 
     # --- ТЕСТ 1: Исполнение старой логики (LOAD_CONFIG) ---
-    print("\n--- 📞 ТЕСТ 1: LOAD_CONFIG (Старый функционал) ---")
+    print("\n--- 📞 ТЕСТ 1.1: LOAD_CONFIG ---")
     config_context = CommandContext(
         command_name="LOAD_CONFIG",
         correlation_id="C-1",
-        user_id=101,
-        params={"path": "/conf/config.yaml"},
-        source_service="UserAPI",
+        params={"path": "./config/config.yaml"},
+        source_service="MAIN",
+        user_id="SolitarySpiral",
     )
 
     result = await brain.route_command(config_context)
@@ -50,6 +55,52 @@ async def ask_octamillia():
             print(f"Окружение: {result.data.environment}")
             print(f"ttl: {result.data.ttl}")
 
+            # А вот это самая мощная фича для "Вен" (Event Sourcing):
+            # Мы можем одной командой превратить это в JSON для отправки в Кафку/БД
+            json_data = result.model_dump_json()
+            print(f"Serialized for Veins: {json_data}")
+            # {"status": "SUCCESS", "message": "", "data": {"filename": "...", ...}}
+
+    else:
+        print(f"Ошибка: {result.message}")
+
+    print("\n--- 📞 ТЕСТ 1.2: SET_KEY ---")
+    config_context = CommandContext(
+        command_name="SET_KEY",
+        correlation_id="C-2",
+        params={"data": {"key": "token", "value": "vk.1234"}, "path": "./config/config.yaml"},
+        source_service="MAIN",
+        user_id="SolitarySpiral",
+    )
+
+    result = await brain.route_command(config_context)
+    print("Результат команды route_command()", result)
+
+    if result.is_success:
+        if isinstance(result.data, ConfigPayload):
+            # А вот это самая мощная фича для "Вен" (Event Sourcing):
+            # Мы можем одной командой превратить это в JSON для отправки в Кафку/БД
+            json_data = result.model_dump_json()
+            print(f"Serialized for Veins: {json_data}")
+            # {"status": "SUCCESS", "message": "", "data": {"filename": "...", ...}}
+
+    else:
+        print(f"Ошибка: {result.message}")
+
+    print("\n--- 📞 ТЕСТ 1.3: GET_KEY ---")
+    config_context = CommandContext(
+        command_name="GET_KEY",
+        correlation_id="C-3",
+        params={"key": "token", "path": "./config/config.yaml"},
+        source_service="MAIN",
+        user_id="SolitarySpiral",
+    )
+
+    result = await brain.route_command(config_context)
+    print("Результат команды route_command()", result)
+
+    if result.is_success:
+        if isinstance(result.data, ConfigPayload):
             # А вот это самая мощная фича для "Вен" (Event Sourcing):
             # Мы можем одной командой превратить это в JSON для отправки в Кафку/БД
             json_data = result.model_dump_json()
