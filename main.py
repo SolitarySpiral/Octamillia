@@ -137,6 +137,57 @@ async def ask_octamillia():
     else:
         print(f"Ошибка: {result.message}")
 
+    # --- ТЕСТ НОВОЙ ПАЙПЛАЙН-ТЕНТАКЛИ ---
+    print("\n" + "=" * 50)
+    print("🧪 ТЕСТ КОНВЕЙЕРНОЙ ТЕНТАКЛИ")
+    print("=" * 50)
+
+    # Тест 1: Успешный конвейер
+    print("\n--- 📊 ТЕСТ 1: Успешная обработка ---")
+    pipeline_context = CommandContext(
+        command_name="PROCESS_PIPELINE",
+        correlation_id="PIPE-001",
+        params={"data": {"age": "25", "score": "100", "items": "5"}},
+        user_id="test_user",
+        source_service="TEST",
+    )
+
+    result = await brain.route_command(pipeline_context)
+    print(f"Результат: {result.status}")
+    if result.is_success:
+        print(f"Данные после конвейера: {result.data.get('result')}")
+        print(f"Метаданные: {result.data.get('metadata')}")
+
+    # Тест 2: Ошибка валидации
+    print("\n--- ⚠️ ТЕСТ 2: Ошибка валидации ---")
+    bad_pipeline_context = CommandContext(
+        command_name="PROCESS_PIPELINE",
+        correlation_id="PIPE-002",
+        params={
+            "data": {
+                "age": "25",
+                "score": "не число",  # Ошибка здесь!
+                "items": "5",
+            }
+        },
+        user_id="test_user",
+        source_service="TEST",
+    )
+
+    bad_result = await brain.route_command(bad_pipeline_context)
+    print(f"Результат: {bad_result.status}")
+    print(f"Сообщение: {bad_result.message}")
+
+    # Тест 3: Проверка, что тентакля автоматически подгрузилась
+    print("\n--- 🔍 ТЕСТ 3: Проверка регистрации ---")
+    print(f"Зарегистрированные тентакли: {list(brain.registry.keys())}")
+    print(f"Доступные команды: {list(brain.command_map.keys())}")
+
+    if "DATA_PIPELINE" in brain.registry:
+        print("✅ DATA_PIPELINE успешно зарегистрирована!")
+    if "PROCESS_PIPELINE" in brain.command_map:
+        print("✅ PROCESS_PIPELINE доступна для роутинга!")
+
     # --- ТЕСТ 3: Проверка на несуществующую команду
     print("\n--- ✅ Проверка универсальности ---")
     unknown_context = CommandContext(

@@ -86,7 +86,9 @@ class Brain:
 
     def initiate_regeneration(self, tentacle_id: str):
         """Паттерн Регенерации: Мозг дает команду Телу отрастить новое щупальце."""
-        print(f"  [BRAIN]: Обнаружена нехватка мощностей. Инициирую регенерацию {tentacle_id}...")
+        # Только если это внешняя тентакля
+        if tentacle_id in self.active_external_tentacles:
+            print(f"  [BRAIN]: Инициирую регенерацию {tentacle_id}...")
         # Здесь была бы команда к Kubernetes/Docker на запуск нового Pod
 
     def _get_standin_instance(self, metadata: TentacleMetadata) -> CommandDispatchTentacle:
@@ -153,9 +155,7 @@ class Brain:
                     self.initiate_regeneration(t_id)
                     # И пробуем следующее щупальце в списке
             else:
-                print(
-                    f"[BRAIN]: Щупальце {t_id} не является внешним клиентом. Не пройдена проверка:Есть ли для этого ID активный RPC-клиент"
-                )
+                print(f"[DEBUG]: Щупальце {t_id} - это standin, внешнего клиента нет")
         print(f"[BRAIN]: Внешние щупальца для {command} недоступны. Переключаюсь на STANDIN.")
 
         tentacle_id = tentacle_ids[0]

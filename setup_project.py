@@ -70,6 +70,7 @@ __pycache__/
 dist/
 *.egg-info/
 .coverage
+.pytest_cache
 # Sphinx Documentation
 docs/_build/
 """
